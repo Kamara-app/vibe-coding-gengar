@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { Character } from './character.js';
 import { Controls } from './controls.js';
 import { Camera } from './camera.js';
@@ -21,62 +20,95 @@ export class Game {
         this.loadingManager = null;
         this.isGameOver = false;
         this.isPaused = false;
+        this.initialized = false;
     }
 
     init() {
+        // Prevent multiple initializations
+        if (this.initialized) return;
+        this.initialized = true;
+
+        console.log("Initializing game...");
+
+        // Make sure THREE is available
+        if (typeof THREE === 'undefined') {
+            console.error("THREE.js is not loaded. Cannot initialize game.");
+            this.showError("THREE.js library is not loaded. Please refresh the page or check your internet connection.");
+            return;
+        }
+
         // Setup loading manager
         this.loadingManager = new LoadingManager();
 
-        // Initialize Three.js scene
-        this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x000000);
-        this.scene.fog = new THREE.FogExp2(0x000000, 0.02);
+        try {
+            // Initialize Three.js scene
+            this.scene = new THREE.Scene();
+            this.scene.background = new THREE.Color(0x000011); // Slightly blue-black
+            this.scene.fog = new THREE.FogExp2(0x000022, 0.02);
 
-        // Setup renderer
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        document.getElementById('game-container').appendChild(this.renderer.domElement);
+            // Setup renderer
+            this.renderer = new THREE.WebGLRenderer({ antialias: true });
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('game-container').appendChild(this.renderer.domElement);
 
-        // Setup camera
-        this.camera = new Camera(this.scene);
+            // Setup camera
+            this.camera = new Camera(this.scene);
 
-        // Setup lighting
-        this.setupLighting();
+            // Setup lighting
+            this.setupLighting();
 
-        // Setup ground
-        this.setupGround();
+            // Setup ground
+            this.setupGround();
 
-        // Setup particle system
-        this.particles = new ParticleSystem(this.scene);
+            // Setup particle system
+            this.particles = new ParticleSystem(this.scene);
 
-        // Setup character
-        this.character = new Character(this.scene, this.loadingManager, this.particles);
+            // Setup character
+            this.character = new Character(this.scene, this.loadingManager, this.particles);
 
-        // Setup controls
-        this.controls = new Controls(this.character);
+            // Setup controls
+            this.controls = new Controls(this.character);
 
-        // Setup enemies
-        this.enemies = new EnemyManager(this.scene, this.character, this.loadingManager);
+            // Setup enemies
+            this.enemies = new EnemyManager(this.scene, this.character, this.loadingManager);
 
-        // Handle window resize
-        window.addEventListener('resize', () => this.onWindowResize(), false);
+            // Handle window resize
+            window.addEventListener('resize', () => this.onWindowResize(), false);
 
-        // Start animation loop
-        this.animate();
+            // Start animation loop
+            this.animate();
 
-        // Handle pause with ESC key
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-                this.togglePause();
-            }
-        });
+            // Handle pause with ESC key
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    this.togglePause();
+                }
+            });
+
+            console.log("Game initialization complete!");
+        } catch (error) {
+            console.error("Error initializing game:", error);
+            this.showError("An error occurred while initializing the game. Please check the console for details.");
+        }
+    }
+
+    showError(message) {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            loadingScreen.innerHTML = `
+                <div class="loading-content">
+                    <h1>Error</h1>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
     }
 
     setupLighting() {
         // Add ambient light
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        const ambientLight = new THREE.AmbientLight(0x404060, 0.5);
         this.scene.add(ambientLight);
 
         // Add directional light
@@ -99,21 +131,104 @@ export class Game {
         this.scene.add(purpleLight);
 
         // Add fog for ghostly atmosphere
-        this.scene.fog = new THREE.FogExp2(0x000000, 0.02);
+        this.scene.fog = new THREE.FogExp2(0x000022, 0.02);
     }
 
     setupGround() {
-        // Create a simple ground plane
-        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        // Create a larger ground plane
+        const groundSize = 200;
+        const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize);
+
+        // Create checker pattern texture
+        const textureSize = 1024;
+        const canvas = document.createElement('canvas');
+        canvas.width = textureSize;
+        canvas.height = textureSize;
+        const context = canvas.getContext('2d');
+
+        // Draw checkerboard pattern
+        const tileSize = textureSize / 16;
+        context.fillStyle = '#1a1a2e'; // Dark purple-blue base
+        context.fillRect(0, 0, textureSize, textureSize);
+
+        for (let y = 0; y < textureSize; y += tileSize) {
+            for (let x = 0; x < textureSize; x += tileSize) {
+                // Skip some cells to create an irregular pattern
+                if ((x + y) % (tileSize * 3) === 0) {
+                    context.fillStyle = '#2c2c54'; // Lighter square
+                } else if ((x + y) % (tileSize * 2) === 0) {
+                    context.fillStyle = '#20203c'; // Mid square
+                } else {
+                    continue; // Skip this square (keep background)
+                }
+                context.fillRect(x, y, tileSize, tileSize);
+            }
+        }
+
+        // Draw grid lines
+        context.strokeStyle = '#4e4e8e';
+        context.lineWidth = 1;
+        const gridStep = tileSize;
+
+        for (let i = 0; i <= textureSize; i += gridStep) {
+            // Draw grid line
+            context.beginPath();
+            context.moveTo(0, i);
+            context.lineTo(textureSize, i);
+            context.stroke();
+
+            context.beginPath();
+            context.moveTo(i, 0);
+            context.lineTo(i, textureSize);
+            context.stroke();
+        }
+
+        // Stronger lines every 4 cells
+        context.strokeStyle = '#7752b8'; // Gengar purple
+        context.lineWidth = 2;
+
+        for (let i = 0; i <= textureSize; i += gridStep * 4) {
+            context.beginPath();
+            context.moveTo(0, i);
+            context.lineTo(textureSize, i);
+            context.stroke();
+
+            context.beginPath();
+            context.moveTo(i, 0);
+            context.lineTo(i, textureSize);
+            context.stroke();
+        }
+
+        // Create texture from canvas
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(4, 4); // Repeat the texture
+
+        // Create ground material with the texture
         const groundMaterial = new THREE.MeshStandardMaterial({
-            color: 0x222222,
-            roughness: 0.8,
-            metalness: 0.2
+            map: texture,
+            roughness: 0.9,
+            metalness: 0.1
         });
+
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-        ground.rotation.x = -Math.PI / 2;
+        ground.rotation.x = -Math.PI / 2; // Lay flat
         ground.receiveShadow = true;
         this.scene.add(ground);
+
+        // Add a grid helper for extra visibility
+        const gridHelper = new THREE.GridHelper(groundSize, 40, 0x8a2be2, 0x444466);
+        gridHelper.position.y = 0.02; // Slightly above ground to avoid z-fighting
+        this.scene.add(gridHelper);
+
+        // Add a center marker
+        const centerGeometry = new THREE.CircleGeometry(2, 32);
+        const centerMaterial = new THREE.MeshBasicMaterial({ color: 0x8a2be2, transparent: true, opacity: 0.5 });
+        const centerMarker = new THREE.Mesh(centerGeometry, centerMaterial);
+        centerMarker.rotation.x = -Math.PI / 2;
+        centerMarker.position.y = 0.03;
+        this.scene.add(centerMarker);
     }
 
     animate() {
@@ -128,6 +243,11 @@ export class Game {
             this.loadingManager.update();
         }
 
+        // Update controls
+        if (this.controls && this.camera) {
+            this.controls.update(this.camera);
+        }
+
         // Update character
         if (this.character && !this.isGameOver) {
             this.character.update(delta);
@@ -135,13 +255,16 @@ export class Game {
         }
 
         // Update camera
-        if (this.camera && this.character) {
+        if (this.camera && this.character && this.character.model) {
             this.camera.update(this.character.model);
         }
 
         // Update enemies
         if (this.enemies && !this.isGameOver) {
             this.enemies.update(delta, this.character);
+
+            // Check for collisions between character attacks and enemies
+            this.checkCollisions();
         }
 
         // Update particles
@@ -155,7 +278,59 @@ export class Game {
         }
 
         // Render scene
-        this.renderer.render(this.scene, this.camera.camera);
+        if (this.renderer && this.scene && this.camera) {
+            this.renderer.render(this.scene, this.camera.camera);
+        }
+    }
+
+    checkCollisions() {
+        // This is a simplified collision detection system
+        // In a real game, you'd want something more sophisticated
+
+        // Get all active projectiles from particles
+        if (this.particles && this.particles.particleSystems && this.enemies) {
+            const projectiles = this.particles.particleSystems.filter(p =>
+                p.userData && p.userData.type === 'projectile');
+
+            // Check each projectile against each enemy
+            projectiles.forEach(projectile => {
+                this.enemies.enemies.forEach(enemy => {
+                    // Simple distance-based collision
+                    const distance = projectile.position.distanceTo(enemy.position);
+
+                    if (distance < 1.5) { // Collision radius
+                        // Apply damage
+                        this.enemies.damageEnemy(enemy, projectile.userData.damage || 20);
+
+                        // Remove projectile
+                        this.scene.remove(projectile);
+                        const index = this.particles.particleSystems.indexOf(projectile);
+                        if (index > -1) {
+                            this.particles.particleSystems.splice(index, 1);
+                        }
+                    }
+                });
+            });
+
+            // Handle area effects (like hypnosis)
+            const areaEffects = this.particles.particleSystems.filter(p =>
+                p.userData && p.userData.type === 'area');
+
+            areaEffects.forEach(effect => {
+                if (effect.userData.effect === 'stun') {
+                    // Get enemies in radius
+                    const enemiesInRange = this.enemies.getEnemiesInRadius(
+                        effect.position,
+                        effect.userData.radius || 5
+                    );
+
+                    // Apply stun
+                    enemiesInRange.forEach(enemy => {
+                        this.enemies.stunEnemy(enemy, 3); // 3 seconds stun
+                    });
+                }
+            });
+        }
     }
 
     updateUI() {
@@ -189,10 +364,15 @@ export class Game {
 
     gameOver() {
         this.isGameOver = true;
-        document.getElementById('game-over').classList.remove('hidden');
+        const gameOverElement = document.getElementById('game-over');
+        if (gameOverElement) {
+            gameOverElement.classList.remove('hidden');
+        }
     }
 
     restart() {
+        console.log("Restarting game...");
+
         // Reset character
         if (this.character) {
             this.character.reset();
@@ -203,23 +383,56 @@ export class Game {
             this.enemies.reset();
         }
 
+        // Clear all particles
+        if (this.particles) {
+            this.particles.clear();
+        }
+
         this.isGameOver = false;
+        console.log("Game restarted.");
     }
 
     togglePause() {
         this.isPaused = !this.isPaused;
-        if (this.isPaused) {
-            document.getElementById('controls-info').classList.remove('hidden');
-        } else {
-            document.getElementById('controls-info').classList.add('hidden');
+        const controlsInfo = document.getElementById('controls-info');
+
+        if (controlsInfo) {
+            if (this.isPaused) {
+                controlsInfo.classList.remove('hidden');
+            } else {
+                controlsInfo.classList.add('hidden');
+            }
         }
+
+        console.log("Game " + (this.isPaused ? "paused" : "resumed"));
     }
 
     onWindowResize() {
-        if (this.camera) {
+        if (this.camera && this.camera.camera) {
             this.camera.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.camera.updateProjectionMatrix();
         }
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+        if (this.renderer) {
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    }
+
+    cleanup() {
+        // Remove event listeners
+        window.removeEventListener('resize', this.onWindowResize);
+        document.removeEventListener('keydown', this.onKeyDown);
+
+        // Dispose of Three.js resources
+        if (this.renderer) {
+            this.renderer.dispose();
+        }
+
+        // Remove controls
+        if (this.controls) {
+            this.controls.dispose();
+        }
+
+        console.log("Game resources cleaned up");
     }
 }

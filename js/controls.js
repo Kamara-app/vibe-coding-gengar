@@ -1,29 +1,32 @@
-import * as THREE from 'three';
-
 export class Controls {
   constructor(character) {
-      this.character = character;
-      this.keys = {
-          forward: false,
-          backward: false,
-          left: false,
-          right: false,
-          jump: false,
-          attack1: false,
-          attack2: false
-      };
+    this.character = character;
+    this.keys = {
+        forward: false,
+        backward: false,
+        left: false,
+        right: false,
+        jump: false,
+        shadowBall: false,
+        hypnosis: false,
+        dreamEater: false,
+        shadowPunch: false
+    };
 
-      this.direction = { x: 0, z: 0 };
-      this.speed = 0.1;
-      this.isAttacking = false;
+    this.direction = new THREE.Vector3(0, 0, 0);
+    this.isAttacking = false;
 
-      this.setupEventListeners();
+    // Bind event handlers to maintain this context
+    this.onKeyDown = this.onKeyDown.bind(this);
+    this.onKeyUp = this.onKeyUp.bind(this);
+
+    this.setupEventListeners();
   }
 
   setupEventListeners() {
       // Keyboard events
-      document.addEventListener('keydown', (e) => this.onKeyDown(e), false);
-      document.addEventListener('keyup', (e) => this.onKeyUp(e), false);
+      document.addEventListener('keydown', this.onKeyDown, false);
+      document.addEventListener('keyup', this.onKeyUp, false);
   }
 
   onKeyDown(event) {
@@ -47,20 +50,26 @@ export class Controls {
           case 'Space':
               this.keys.jump = true;
               break;
-          case 'KeyE':
-              this.keys.attack1 = true;
-              this.performAttack('shadowBall');
-              break;
           case 'KeyQ':
-              this.keys.attack2 = true;
-              this.performAttack('hypnosis');
+              if (!this.keys.shadowBall) {
+                  this.keys.shadowBall = true;
+                  this.performAttack('shadowBall');
+              }
               break;
-          case 'KeyR':
-              this.keys.attack3 = true;
+          case 'KeyW':
+              // We need to avoid conflict with the forward movement
+              // So only capture for attacks if not already moving forward
+              if (!this.keys.forward) {
+                  this.keys.hypnosis = true;
+                  this.performAttack('hypnosis');
+              }
+              break;
+          case 'KeyE':
+              this.keys.dreamEater = true;
               this.performAttack('dreamEater');
               break;
-          case 'KeyF':
-              this.keys.attack4 = true;
+          case 'KeyR':
+              this.keys.shadowPunch = true;
               this.performAttack('shadowPunch');
               break;
       }
@@ -87,27 +96,25 @@ export class Controls {
           case 'Space':
               this.keys.jump = false;
               break;
-          case 'KeyE':
-              this.keys.attack1 = false;
-              break;
           case 'KeyQ':
-              this.keys.attack2 = false;
+              this.keys.shadowBall = false;
+              break;
+          case 'KeyW':
+              this.keys.hypnosis = false;
+              break;
+          case 'KeyE':
+              this.keys.dreamEater = false;
               break;
           case 'KeyR':
-              this.keys.attack3 = false;
-              break;
-          case 'KeyF':
-              this.keys.attack4 = false;
+              this.keys.shadowPunch = false;
               break;
       }
   }
 
   update(camera) {
-      // Reset direction
-      this.direction.x = 0;
-      this.direction.z = 0;
+      // Calculate movement direction
+      this.direction.set(0, 0, 0);
 
-      // Calculate direction vector based on camera orientation
       if (this.keys.forward) {
           this.direction.z = -1;
       }
@@ -123,9 +130,7 @@ export class Controls {
 
       // Normalize direction vector if moving diagonally
       if (this.direction.x !== 0 && this.direction.z !== 0) {
-          const length = Math.sqrt(this.direction.x * this.direction.x + this.direction.z * this.direction.z);
-          this.direction.x /= length;
-          this.direction.z /= length;
+          this.direction.normalize();
       }
 
       // Apply camera rotation to movement direction
@@ -144,41 +149,27 @@ export class Controls {
           );
 
           // Apply rotation to direction vector
-          const moveDirection = new THREE.Vector3(this.direction.x, 0, this.direction.z);
+          const moveDirection = this.direction.clone();
           moveDirection.applyMatrix4(rotationMatrix);
 
           this.direction.x = moveDirection.x;
           this.direction.z = moveDirection.z;
-
-          // Make character face movement direction
-          if (this.character && this.character.mesh) {
-              const angle = Math.atan2(this.direction.x, this.direction.z);
-              this.character.mesh.rotation.y = angle;
-          }
       }
 
       // Apply movement to character
-      if (this.character && this.character.mesh) {
+      if (this.character) {
+          // Move the character based on the direction
           if (this.direction.x !== 0 || this.direction.z !== 0) {
-              // Move character
-              this.character.mesh.position.x += this.direction.x * this.speed;
-              this.character.mesh.position.z += this.direction.z * this.speed;
-
-              // Play walking animation if available
-              if (this.character.animations && this.character.animations.walk && !this.isAttacking) {
-                  this.character.playAnimation('walk');
-              }
-          } else if (this.character.animations && this.character.animations.idle && !this.isAttacking) {
-              // Play idle animation when not moving
-              this.character.playAnimation('idle');
+              // Call the character's move method with the calculated direction
+              this.character.move(this.direction);
+          } else if (this.character.isMoving) {
+              // Stop moving if no direction keys are pressed
+              this.character.move(new THREE.Vector3(0, 0, 0));
           }
 
           // Handle jump
-          if (this.keys.jump && this.character.canJump) {
-              this.character.jump();
-              if (this.character.animations && this.character.animations.jump) {
-                  this.character.playAnimation('jump');
-              }
+          if (this.keys.jump) {
+              // Jump logic would go here if implemented in the character
           }
       }
   }
@@ -186,33 +177,46 @@ export class Controls {
   performAttack(attackType) {
       if (!this.character || this.isAttacking) return;
 
-      this.isAttacking = true;
+      let attacked = false;
 
-      // Play appropriate attack animation
-      if (this.character.animations && this.character.animations[attackType]) {
-          this.character.playAnimation(attackType);
-      }
-
-      // Execute attack logic
+      // Execute attack based on type
       switch(attackType) {
           case 'shadowBall':
-              this.character.castShadowBall();
+              attacked = this.character.shadowBall();
               break;
           case 'hypnosis':
-              this.character.castHypnosis();
+              attacked = this.character.hypnosis();
               break;
           case 'dreamEater':
-              this.character.castDreamEater();
+              attacked = this.character.dreamEater();
               break;
           case 'shadowPunch':
-              this.character.castShadowPunch();
+              attacked = this.character.shadowPunch();
               break;
       }
 
-      // Reset attacking state after animation completes
-      setTimeout(() => {
-          this.isAttacking = false;
-      }, this.character.getAttackDuration(attackType));
+      // Only set attacking flag if the attack was successful
+      if (attacked) {
+          // Set attacking flag to prevent multiple attacks
+          this.isAttacking = true;
+
+          // Reset attacking state after a delay
+          setTimeout(() => {
+              this.isAttacking = false;
+          }, this.getAttackDuration(attackType));
+      }
+  }
+
+  getAttackDuration(attackType) {
+      // Return appropriate duration for each attack type
+      // This should match the animation duration
+      switch(attackType) {
+          case 'shadowBall': return 500; // milliseconds
+          case 'hypnosis': return 1000;
+          case 'dreamEater': return 1500;
+          case 'shadowPunch': return 300;
+          default: return 500;
+      }
   }
 
   dispose() {

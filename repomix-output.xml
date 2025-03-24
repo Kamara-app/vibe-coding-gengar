@@ -1,0 +1,2340 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: **/*
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+<additional_info>
+
+</additional_info>
+
+</file_summary>
+
+<directory_structure>
+js/
+  effects/
+    particles.js
+  utils/
+    loader.js
+  camera.js
+  character.js
+  combat.js
+  controls.js
+  enemies.js
+  game.js
+  main.js
+styles/
+  main.css
+.gitignore
+index.html
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="js/effects/particles.js">
+export class ParticleSystem {
+    constructor(scene) {
+        this.scene = scene;
+        this.particleSystems = [];
+
+        // Create basic particle materials
+        this.materials = {
+            shadowBall: new THREE.PointsMaterial({
+                color: 0x8a2be2,
+                size: 0.2,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                opacity: 0.8
+            }),
+            hypnosis: new THREE.PointsMaterial({
+                color: 0xff00ff,
+                size: 0.15,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                opacity: 0.7
+            }),
+            dreamEater: new THREE.PointsMaterial({
+                color: 0xff0000,
+                size: 0.1,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                opacity: 0.9
+            }),
+            shadowPunch: new THREE.PointsMaterial({
+                color: 0x000000,
+                size: 0.25,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                opacity: 0.6
+            })
+        };
+    }
+
+    createParticleSystem(type, position, count = 50, duration = 2) {
+        // Create geometry
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(count * 3);
+        const velocities = new Float32Array(count * 3);
+
+        // Initialize particles in a sphere
+        for (let i = 0; i < count; i++) {
+            const i3 = i * 3;
+
+            // Random position in sphere
+            const radius = Math.random() * 0.5;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI;
+
+            positions[i3] = position.x + radius * Math.sin(phi) * Math.cos(theta);
+            positions[i3 + 1] = position.y + radius * Math.sin(phi) * Math.sin(theta);
+            positions[i3 + 2] = position.z + radius * Math.cos(phi);
+
+            // Random velocity
+            velocities[i3] = (Math.random() - 0.5) * 2;
+            velocities[i3 + 1] = (Math.random() - 0.5) * 2;
+            velocities[i3 + 2] = (Math.random() - 0.5) * 2;
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        // Create particle system
+        const material = this.materials[type] || this.materials.shadowBall;
+        const particleSystem = new THREE.Points(geometry, material.clone());
+
+        // Add metadata
+        particleSystem.userData = {
+            velocities: velocities,
+            lifetime: duration,
+            age: 0,
+            type: type
+        };
+
+        this.scene.add(particleSystem);
+        this.particleSystems.push(particleSystem);
+
+        return particleSystem;
+    }
+
+    createShadowBall(position, direction) {
+        const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+        const material = new THREE.MeshStandardMaterial({
+            color: 0x8a2be2,
+            emissive: 0x4a0082,
+            transparent: true,
+            opacity: 0.8
+        });
+
+        const shadowBall = new THREE.Mesh(geometry, material);
+        shadowBall.position.copy(position);
+
+        // Add trail particles
+        this.createParticleSystem('shadowBall', position, 30, 1);
+
+        // Add metadata
+        shadowBall.userData = {
+            direction: direction.normalize(),
+            speed: 15,
+            damage: 30,
+            lifetime: 3,
+            age: 0,
+            type: 'projectile'
+        };
+
+        this.scene.add(shadowBall);
+        this.particleSystems.push(shadowBall);
+
+        return shadowBall;
+    }
+
+    createHypnosisEffect(position, radius = 5) {
+        const ringGeometry = new THREE.RingGeometry(radius - 0.2, radius, 32);
+        const ringMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff00ff,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.5
+        });
+
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.position.copy(position);
+        ring.rotation.x = Math.PI / 2; // Lay flat
+
+        // Add particles
+        this.createParticleSystem('hypnosis', position, 100, 3);
+
+        // Add metadata
+        ring.userData = {
+            radius: radius,
+            lifetime: 3,
+            age: 0,
+            type: 'area',
+            effect: 'stun'
+        };
+
+        this.scene.add(ring);
+        this.particleSystems.push(ring);
+
+        return ring;
+    }
+
+    update(deltaTime) {
+        // Update all particle systems
+        for (let i = this.particleSystems.length - 1; i >= 0; i--) {
+            const system = this.particleSystems[i];
+
+            // Update age
+            system.userData.age += deltaTime;
+
+            // Remove expired systems
+            if (system.userData.age >= system.userData.lifetime) {
+                this.scene.remove(system);
+                this.particleSystems.splice(i, 1);
+                continue;
+            }
+
+            // Update based on type
+            if (system instanceof THREE.Points) {
+                this.updateParticles(system, deltaTime);
+            } else if (system.userData.type === 'projectile') {
+                this.updateProjectile(system, deltaTime);
+            } else if (system.userData.type === 'area') {
+                this.updateAreaEffect(system, deltaTime);
+            }
+        }
+    }
+
+    updateParticles(system, deltaTime) {
+        const positions = system.geometry.attributes.position.array;
+        const velocities = system.userData.velocities;
+
+        // Update each particle position
+        for (let i = 0; i < positions.length; i += 3) {
+            positions[i] += velocities[i] * deltaTime;
+            positions[i + 1] += velocities[i + 1] * deltaTime;
+            positions[i + 2] += velocities[i + 2] * deltaTime;
+
+            // Add gravity
+            velocities[i + 1] -= 0.1 * deltaTime;
+        }
+
+        system.geometry.attributes.position.needsUpdate = true;
+
+        // Fade out based on age
+        const progress = system.userData.age / system.userData.lifetime;
+        system.material.opacity = 1 - progress;
+    }
+
+    updateProjectile(projectile, deltaTime) {
+        // Move in direction
+        const movement = projectile.userData.direction.clone()
+            .multiplyScalar(projectile.userData.speed * deltaTime);
+        projectile.position.add(movement);
+
+        // Create trail particles
+        if (Math.random() < 0.3) {
+            this.createParticleSystem(
+                projectile.userData.type === 'shadowBall' ? 'shadowBall' : 'shadowPunch',
+                projectile.position,
+                5,
+                0.5
+            );
+        }
+
+        // Fade out based on age
+        const progress = projectile.userData.age / projectile.userData.lifetime;
+        if (projectile.material) {
+            projectile.material.opacity = 1 - progress;
+        }
+    }
+
+    updateAreaEffect(effect, deltaTime) {
+        // Pulse effect
+        const progress = effect.userData.age / effect.userData.lifetime;
+        const pulse = 1 + 0.2 * Math.sin(progress * Math.PI * 10);
+
+        effect.scale.set(pulse, pulse, pulse);
+
+        // Fade out based on age
+        if (effect.material) {
+            effect.material.opacity = 0.5 * (1 - progress);
+        }
+    }
+
+    clear() {
+        // Remove all particle systems
+        for (const system of this.particleSystems) {
+            this.scene.remove(system);
+        }
+        this.particleSystems = [];
+    }
+}
+</file>
+
+<file path="js/utils/loader.js">
+export class LoadingManager {
+    constructor() {
+        this.resources = {};
+        this.totalResources = 0;
+        this.loadedResources = 0;
+        this.isLoading = true;
+        
+        // Get loading screen elements
+        this.loadingScreen = document.getElementById('loading-screen');
+        this.progressBar = document.querySelector('.progress');
+        
+        // Show loading screen
+        if (this.loadingScreen) {
+            this.loadingScreen.style.display = 'flex';
+        }
+    }
+    
+    startLoading(resourceName) {
+        if (!this.resources[resourceName]) {
+            this.resources[resourceName] = {
+                loaded: false,
+                progress: 0
+            };
+            this.totalResources++;
+        }
+    }
+    
+    updateProgress(resourceName, percent) {
+        if (this.resources[resourceName]) {
+            this.resources[resourceName].progress = percent;
+            this.updateTotalProgress();
+        }
+    }
+    
+    completeLoading(resourceName) {
+        if (this.resources[resourceName]) {
+            this.resources[resourceName].loaded = true;
+            this.resources[resourceName].progress = 100;
+            this.loadedResources++;
+            this.updateTotalProgress();
+            
+            // Check if all resources are loaded
+            if (this.loadedResources >= this.totalResources) {
+                this.finishLoading();
+            }
+        }
+    }
+    
+    errorLoading(resourceName, error) {
+        console.error(`Error loading ${resourceName}:`, error);
+        
+        // Mark as loaded anyway to prevent hanging
+        this.completeLoading(resourceName);
+    }
+    
+    updateTotalProgress() {
+        // Calculate total progress percentage
+        let totalProgress = 0;
+        
+        for (const resource in this.resources) {
+            totalProgress += this.resources[resource].progress;
+        }
+        
+        const overallProgress = this.totalResources > 0 
+            ? totalProgress / (this.totalResources * 100) * 100 
+            : 100;
+        
+        // Update progress bar
+        if (this.progressBar) {
+            this.progressBar.style.width = `${overallProgress}%`;
+        }
+    }
+    
+    finishLoading() {
+        this.isLoading = false;
+        
+        // Hide loading screen with a fade out
+        if (this.loadingScreen) {
+            this.loadingScreen.style.opacity = 0;
+            setTimeout(() => {
+                this.loadingScreen.style.display = 'none';
+            }, 500); // Match this with CSS transition time
+        }
+    }
+    
+    update() {
+        // This method can be called in the animation loop
+        // to continuously check loading status
+        if (!this.isLoading) return;
+        
+        // Could add additional loading logic here if needed
+    }
+}
+</file>
+
+<file path="js/camera.js">
+export class Camera {
+    constructor(scene) {
+        this.scene = scene;
+
+        // Create a perspective camera
+        this.camera = new THREE.PerspectiveCamera(
+            75, // Field of view
+            window.innerWidth / window.innerHeight, // Aspect ratio
+            0.1, // Near clipping plane
+            1000 // Far clipping plane
+        );
+
+        // Set initial position
+        this.camera.position.set(0, 5, 10);
+        this.camera.lookAt(0, 0, 0);
+
+        // Camera settings
+        this.followDistance = 10;
+        this.followHeight = 5;
+        this.lookAtHeight = 2;
+        this.smoothFactor = 0.1;
+
+        // Add camera to scene
+        scene.add(this.camera);
+    }
+
+    update(target) {
+        if (!target) return;
+
+        // Calculate ideal camera position
+        const idealPosition = new THREE.Vector3();
+        idealPosition.copy(target.position);
+
+        // Position camera behind and above the target
+        const cameraOffset = new THREE.Vector3(0, this.followHeight, this.followDistance);
+        idealPosition.add(cameraOffset);
+
+        // Smoothly move camera to ideal position
+        this.camera.position.lerp(idealPosition, this.smoothFactor);
+
+        // Calculate look at position (slightly above target)
+        const lookAtPosition = new THREE.Vector3();
+        lookAtPosition.copy(target.position);
+        lookAtPosition.y += this.lookAtHeight;
+
+        // Make camera look at target
+        this.camera.lookAt(lookAtPosition);
+    }
+
+    getWorldDirection(target) {
+        return this.camera.getWorldDirection(target);
+    }
+
+    // Handle window resize
+    resize() {
+        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.updateProjectionMatrix();
+    }
+}
+</file>
+
+<file path="js/character.js">
+import { Combat } from './combat.js';
+
+export class Character {
+    constructor(scene, loadingManager, particles) {
+        this.scene = scene;
+        this.loadingManager = loadingManager;
+        this.particles = particles;
+
+        this.model = null;
+        this.mixer = null;
+        this.animations = {};
+        this.currentAction = null;
+
+        this.position = new THREE.Vector3(0, 0, 0);
+        this.rotation = new THREE.Euler(0, 0, 0);
+        this.velocity = new THREE.Vector3(0, 0, 0);
+
+        this.health = 100;
+        this.energy = 100;
+        this.energyRegenRate = 5; // per second
+
+        this.moveSpeed = 5;
+        this.isMoving = false;
+        this.direction = new THREE.Vector3(0, 0, 0);
+
+        // Add this flag to check if model is loaded
+        this.modelLoaded = false;
+
+        this.combat = new Combat(this, scene, particles);
+        this.cooldowns = {
+            shadowBall: 0,
+            hypnosis: 0,
+            dreamEater: 0,
+            shadowPunch: 0
+        };
+
+        this.cooldownTimes = {
+            shadowBall: 2,
+            hypnosis: 5,
+            dreamEater: 8,
+            shadowPunch: 1
+        };
+
+        this.energyCosts = {
+            shadowBall: 20,
+            hypnosis: 30,
+            dreamEater: 40,
+            shadowPunch: 10
+        };
+
+        // Create placeholder immediately to ensure we have something to show
+        this.createPlaceholderModel();
+
+        // Then try to load the actual model
+        this.loadModel();
+    }
+
+    async loadModel() {
+        console.log('Starting to load FBX model...');
+
+        if (this.loadingManager) {
+            this.loadingManager.startLoading('Gengar Model');
+        }
+
+        try {
+            // Try different ways to access FBXLoader
+            let FBXLoaderClass = null;
+
+            // First check if our helper function is available
+            if (typeof window.waitForFBXLoader === 'function') {
+                FBXLoaderClass = await window.waitForFBXLoader();
+            }
+
+            // If that didn't work, try direct access
+            if (!FBXLoaderClass) {
+                if (typeof THREE.FBXLoader !== 'undefined') {
+                    FBXLoaderClass = THREE.FBXLoader;
+                } else if (typeof window.FBXLoader !== 'undefined') {
+                    FBXLoaderClass = window.FBXLoader;
+                } else if (typeof THREE.examples !== 'undefined' &&
+                           typeof THREE.examples.jsm !== 'undefined' &&
+                           typeof THREE.examples.jsm.loaders !== 'undefined' &&
+                           typeof THREE.examples.jsm.loaders.FBXLoader !== 'undefined') {
+                    FBXLoaderClass = THREE.examples.jsm.loaders.FBXLoader;
+                }
+            }
+
+            if (!FBXLoaderClass) {
+                console.error("FBXLoader not available - using placeholder model");
+                if (this.loadingManager) {
+                    this.loadingManager.completeLoading('Gengar Model');
+                }
+                return;
+            }
+
+            console.log("FBXLoader found:", FBXLoaderClass);
+            const loader = new FBXLoaderClass();
+
+            const modelPath = './Gengar_0324000131_texture_fbx/Gengar_0324000131_texture.fbx';
+
+            loader.load(
+                modelPath,
+                (fbx) => {
+                    console.log('FBX model loaded successfully:', fbx);
+
+                    // Remove placeholder
+                    if (this.model) {
+                        this.scene.remove(this.model);
+                    }
+
+                    this.model = fbx;
+
+                    // Scale and position the model
+                    this.model.scale.set(0.05, 0.05, 0.05);
+                    this.model.position.set(0, 0, 0);
+
+                    // Setup shadows
+                    this.model.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+
+                            // Improve material
+                            if (child.material) {
+                                child.material.shininess = 0;
+                            }
+                        }
+                    });
+
+                    // Setup animations
+                    this.mixer = new THREE.AnimationMixer(this.model);
+
+                    // Create default animations
+                    this.createDefaultAnimations();
+
+                    // Add to scene
+                    this.scene.add(this.model);
+
+                    // Set flag that model is loaded
+                    this.modelLoaded = true;
+
+                    // Play idle animation
+                    this.playAnimation('idle');
+
+                    console.log('Gengar model initialized and added to scene');
+
+                    if (this.loadingManager) {
+                        this.loadingManager.completeLoading('Gengar Model');
+                    }
+                },
+                // Progress callback
+                (xhr) => {
+                    if (xhr.lengthComputable) {
+                        const percentComplete = xhr.loaded / xhr.total * 100;
+                        console.log('Loading progress:', percentComplete.toFixed(2) + '%');
+
+                        if (this.loadingManager) {
+                            this.loadingManager.updateProgress('Gengar Model', percentComplete);
+                        }
+                    }
+                },
+                // Error callback
+                (error) => {
+                    console.error('Error loading Gengar model:', error);
+                    // We're already using placeholder model, just mark as complete
+                    if (this.loadingManager) {
+                        this.loadingManager.completeLoading('Gengar Model');
+                    }
+                }
+            );
+        } catch (error) {
+            console.error("Error setting up FBX loading:", error);
+            // We're already using placeholder model
+            if (this.loadingManager) {
+                this.loadingManager.completeLoading('Gengar Model');
+            }
+        }
+    }
+
+    // Create a more Gengar-like placeholder if model fails to load
+    createPlaceholderModel() {
+        console.log('Creating placeholder model for Gengar');
+
+        // Create a group to hold our custom placeholder
+        const group = new THREE.Group();
+
+        // Main body (purple sphere)
+        const bodyGeometry = new THREE.SphereGeometry(1, 16, 16);
+        const bodyMaterial = new THREE.MeshStandardMaterial({
+            color: 0x8a2be2, // Purple like Gengar
+            emissive: 0x4a0082
+        });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        group.add(body);
+
+        // Eyes (white spheres)
+        const eyeGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+        const eyeMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            emissive: 0xdddddd
+        });
+
+        const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        leftEye.position.set(0.4, 0.3, -0.7);
+        group.add(leftEye);
+
+        const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        rightEye.position.set(-0.4, 0.3, -0.7);
+        group.add(rightEye);
+
+        // Pupils (black spheres)
+        const pupilGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+        const pupilMaterial = new THREE.MeshStandardMaterial({
+            color: 0x000000
+        });
+
+        const leftPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+        leftPupil.position.set(0.4, 0.3, -0.85);
+        group.add(leftPupil);
+
+        const rightPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+        rightPupil.position.set(-0.4, 0.3, -0.85);
+        group.add(rightPupil);
+
+        // Mouth (simple curve)
+        const mouthGeometry = new THREE.TorusGeometry(0.4, 0.05, 8, 8, Math.PI);
+        const mouthMaterial = new THREE.MeshStandardMaterial({
+            color: 0xff0000,
+            emissive: 0x880000
+        });
+        const mouth = new THREE.Mesh(mouthGeometry, mouthMaterial);
+        mouth.position.set(0, -0.2, -0.7);
+        mouth.rotation.set(Math.PI/2, 0, 0);
+        group.add(mouth);
+
+        // Position the entire group
+        group.position.set(0, 1, 0); // Lift it off the ground
+        group.castShadow = true;
+        group.receiveShadow = true;
+
+        this.model = group;
+        this.scene.add(this.model);
+        this.modelLoaded = true;
+
+        // Setup mixer for animations
+        this.mixer = new THREE.AnimationMixer(this.model);
+        this.createDefaultAnimations();
+        this.playAnimation('idle');
+    }
+
+    createDefaultAnimations() {
+        // Since we might not have actual animations in the FBX,
+        // we'll create some basic ones programmatically
+
+        // Idle animation - slight floating motion
+        const idleTrack = this.createFloatingAnimation(0.5, 0.2);
+        this.animations['idle'] = this.mixer.clipAction(idleTrack);
+        this.animations['idle'].setEffectiveWeight(1);
+        this.animations['idle'].setLoop(THREE.LoopRepeat);
+
+        // Walk animation - more pronounced floating with forward motion
+        const walkTrack = this.createFloatingAnimation(1, 0.3);
+        this.animations['walk'] = this.mixer.clipAction(walkTrack);
+        this.animations['walk'].setEffectiveWeight(1);
+        this.animations['walk'].setLoop(THREE.LoopRepeat);
+
+        // Attack animation - quick forward lunge
+        const attackTrack = this.createAttackAnimation();
+        this.animations['attack'] = this.mixer.clipAction(attackTrack);
+        this.animations['attack'].setLoop(THREE.LoopOnce);
+        this.animations['attack'].clampWhenFinished = true;
+    }
+
+    createFloatingAnimation(speed, height) {
+        // Create a simple floating animation
+        const times = [0, 0.5, 1];
+        const positions = [
+            0, 0, 0,
+            0, height, 0,
+            0, 0, 0
+        ];
+
+        const positionKF = new THREE.KeyframeTrack(
+            '.position[y]',
+            times,
+            positions
+        );
+
+        return new THREE.AnimationClip('float', speed, [positionKF]);
+    }
+
+    createAttackAnimation() {
+        // Create a simple attack animation
+        const times = [0, 0.1, 0.2, 0.3];
+        const positions = [
+            0, 0, 0,
+            0, 0.1, -0.2,
+            0, 0.1, -0.1,
+            0, 0, 0
+        ];
+
+        const positionKF = new THREE.KeyframeTrack(
+            '.position',
+            times,
+            positions
+        );
+
+        return new THREE.AnimationClip('attack', 0.3, [positionKF]);
+    }
+
+    playAnimation(name, crossFadeDuration = 0.2) {
+        if (!this.animations[name]) return;
+
+        const newAction = this.animations[name];
+
+        if (this.currentAction === newAction) return;
+
+        if (this.currentAction) {
+            this.currentAction.fadeOut(crossFadeDuration);
+        }
+
+        newAction.reset()
+            .setEffectiveTimeScale(1)
+            .setEffectiveWeight(1)
+            .fadeIn(crossFadeDuration)
+            .play();
+
+        this.currentAction = newAction;
+    }
+
+    move(direction) {
+        this.direction.copy(direction);
+        this.isMoving = direction.lengthSq() > 0;
+
+        if (this.isMoving) {
+            // Normalize direction and apply speed
+            this.direction.normalize();
+
+            // Update rotation to face movement direction
+            this.rotation.y = Math.atan2(this.direction.x, this.direction.z);
+
+            // Play walk animation
+            this.playAnimation('walk');
+        } else {
+            // Play idle animation
+            this.playAnimation('idle');
+        }
+    }
+
+    update(deltaTime) {
+        // Skip if model isn't loaded yet
+        if (!this.modelLoaded) return;
+
+        // Update animation mixer
+        if (this.mixer) {
+            this.mixer.update(deltaTime);
+        }
+
+        // Update position based on movement
+        if (this.isMoving && this.model) {
+            const moveVector = this.direction.clone().multiplyScalar(this.moveSpeed * deltaTime);
+            this.model.position.add(moveVector);
+            this.model.rotation.y = this.rotation.y;
+        }
+
+        // Update cooldowns
+        for (const ability in this.cooldowns) {
+            if (this.cooldowns[ability] > 0) {
+                this.cooldowns[ability] = Math.max(0, this.cooldowns[ability] - deltaTime);
+            }
+        }
+
+        // Regenerate energy
+        this.energy = Math.min(100, this.energy + this.energyRegenRate * deltaTime);
+
+        // Update combat
+        this.combat.update(deltaTime);
+    }
+
+    // Attack methods
+    shadowBall() {
+        if (this.cooldowns.shadowBall > 0 || this.energy < this.energyCosts.shadowBall) return false;
+
+        this.playAnimation('attack');
+        this.cooldowns.shadowBall = this.cooldownTimes.shadowBall;
+        this.energy -= this.energyCosts.shadowBall;
+
+        this.combat.shadowBall();
+        return true;
+    }
+
+    hypnosis() {
+        if (this.cooldowns.hypnosis > 0 || this.energy < this.energyCosts.hypnosis) return false;
+
+        this.playAnimation('attack');
+        this.cooldowns.hypnosis = this.cooldownTimes.hypnosis;
+        this.energy -= this.energyCosts.hypnosis;
+
+        this.combat.hypnosis();
+        return true;
+    }
+
+    dreamEater() {
+        if (this.cooldowns.dreamEater > 0 || this.energy < this.energyCosts.dreamEater) return false;
+
+        this.playAnimation('attack');
+        this.cooldowns.dreamEater = this.cooldownTimes.dreamEater;
+        this.energy -= this.energyCosts.dreamEater;
+
+        this.combat.dreamEater();
+        return true;
+    }
+
+    shadowPunch() {
+        if (this.cooldowns.shadowPunch > 0 || this.energy < this.energyCosts.shadowPunch) return false;
+
+        this.playAnimation('attack');
+        this.cooldowns.shadowPunch = this.cooldownTimes.shadowPunch;
+        this.energy -= this.energyCosts.shadowPunch;
+
+        this.combat.shadowPunch();
+        return true;
+    }
+
+    takeDamage(amount) {
+        this.health = Math.max(0, this.health - amount);
+        // Flash the model red
+        if (this.model) {
+            this.model.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    const originalColor = child.material.color.clone();
+                    child.material.color.set(0xff0000);
+                    setTimeout(() => {
+                        child.material.color.copy(originalColor);
+                    }, 200);
+                }
+            });
+        }
+    }
+
+    heal(amount) {
+        this.health = Math.min(100, this.health + amount);
+    }
+
+    getCooldownPercent(ability) {
+        if (!this.cooldownTimes[ability]) return 0;
+        return (this.cooldowns[ability] / this.cooldownTimes[ability]) * 100;
+    }
+
+    reset() {
+        this.health = 100;
+        this.energy = 100;
+
+        // Reset position
+        if (this.model) {
+            this.model.position.set(0, 0, 0);
+        }
+
+        // Reset cooldowns
+        for (const ability in this.cooldowns) {
+            this.cooldowns[ability] = 0;
+        }
+
+        // Play idle animation
+        this.playAnimation('idle');
+    }
+}
+</file>
+
+<file path="js/combat.js">
+export class Combat {
+    constructor(character, scene, particles) {
+        this.character = character;
+        this.scene = scene;
+        this.particles = particles;
+
+        this.projectiles = [];
+        this.attackRange = 2; // Melee attack range
+        this.projectileSpeed = 15;
+
+        // Attack damage values
+        this.damageValues = {
+            shadowBall: 30,
+            hypnosis: 0, // Stun effect, no damage
+            dreamEater: 50,
+            shadowPunch: 20
+        };
+
+        // Attack cooldowns in seconds
+        this.cooldowns = {
+            shadowBall: 0,
+            hypnosis: 0,
+            dreamEater: 0,
+            shadowPunch: 0
+        };
+
+        // Maximum cooldown times
+        this.maxCooldowns = {
+            shadowBall: 2,
+            hypnosis: 5,
+            dreamEater: 8,
+            shadowPunch: 1
+        };
+    }
+
+    update(deltaTime) {
+        // Update cooldowns
+        for (const attack in this.cooldowns) {
+            if (this.cooldowns[attack] > 0) {
+                this.cooldowns[attack] -= deltaTime;
+            }
+        }
+
+        // Update projectiles
+        this.updateProjectiles(deltaTime);
+    }
+
+    updateProjectiles(deltaTime) {
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+            const projectile = this.projectiles[i];
+
+            // Move projectile
+            const movement = projectile.direction.clone().multiplyScalar(this.projectileSpeed * deltaTime);
+            projectile.position.add(movement);
+
+            // Check for collisions
+            // This would need access to the enemy manager to be fully implemented
+
+            // Remove projectiles that have traveled too far
+            projectile.lifetime -= deltaTime;
+            if (projectile.lifetime <= 0) {
+                this.scene.remove(projectile);
+                this.projectiles.splice(i, 1);
+            }
+        }
+    }
+
+    shadowBall() {
+        if (this.cooldowns.shadowBall > 0) return false;
+
+        // Set cooldown
+        this.cooldowns.shadowBall = this.maxCooldowns.shadowBall;
+
+        // Get character position and direction
+        const position = this.character.model.position.clone();
+        position.y += 1; // Adjust to come from character's center
+
+        // Get direction from character's facing
+        const direction = new THREE.Vector3(0, 0, -1);
+        direction.applyQuaternion(this.character.model.quaternion);
+
+        // Create shadow ball projectile using particle system
+        if (this.particles) {
+            const shadowBall = this.particles.createShadowBall(position, direction);
+            shadowBall.userData.damage = this.damageValues.shadowBall;
+            return true;
+        }
+
+        return false;
+    }
+
+    hypnosis() {
+        if (this.cooldowns.hypnosis > 0) return false;
+
+        // Set cooldown
+        this.cooldowns.hypnosis = this.maxCooldowns.hypnosis;
+
+        // Get character position
+        const position = this.character.model.position.clone();
+
+        // Create hypnosis effect using particle system
+        if (this.particles) {
+            this.particles.createHypnosisEffect(position, 5);
+            return true;
+        }
+
+        return false;
+    }
+
+    dreamEater() {
+        if (this.cooldowns.dreamEater > 0) return false;
+
+        // Set cooldown
+        this.cooldowns.dreamEater = this.maxCooldowns.dreamEater;
+
+        // Get character position
+        const position = this.character.model.position.clone();
+
+        // Create dream eater effect
+        if (this.particles) {
+            // Create particle effect
+            this.particles.createParticleSystem('dreamEater', position, 100, 2);
+
+            // This would need access to the enemy manager to find stunned enemies
+            // and deal damage to them
+
+            // Heal character
+            this.character.heal(20);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    shadowPunch() {
+        if (this.cooldowns.shadowPunch > 0) return false;
+
+        // Set cooldown
+        this.cooldowns.shadowPunch = this.maxCooldowns.shadowPunch;
+
+        // Get character position and direction
+        const position = this.character.model.position.clone();
+
+        // Get direction from character's facing
+        const direction = new THREE.Vector3(0, 0, -1);
+        direction.applyQuaternion(this.character.model.quaternion);
+
+        // Calculate attack position (in front of character)
+        const attackPosition = position.clone().add(
+            direction.clone().multiplyScalar(this.attackRange / 2)
+        );
+
+        // Create shadow punch effect
+        if (this.particles) {
+            this.particles.createParticleSystem('shadowPunch', attackPosition, 30, 0.5);
+
+            // This would need access to the enemy manager to find enemies in range
+            // and deal damage to them
+
+            return true;
+        }
+
+        return false;
+    }
+
+    getAttackDuration(attackType) {
+        // Return animation duration for each attack type
+        switch(attackType) {
+            case 'shadowBall': return 0.5;
+            case 'hypnosis': return 1.0;
+            case 'dreamEater': return 1.5;
+            case 'shadowPunch': return 0.3;
+            default: return 0.5;
+        }
+    }
+}
+</file>
+
+<file path="js/enemies.js">
+export class EnemyManager {
+    constructor(scene, player, loadingManager) {
+        this.scene = scene;
+        this.player = player;
+        this.loadingManager = loadingManager;
+        this.enemies = [];
+        this.maxEnemies = 5;
+        this.spawnRadius = 20;
+        this.spawnTimer = 0;
+        this.spawnInterval = 5; // seconds
+
+        // Basic enemy geometry and material
+        this.enemyGeometry = new THREE.SphereGeometry(1, 16, 16);
+        this.enemyMaterial = new THREE.MeshStandardMaterial({
+            color: 0xff00ff,
+            emissive: 0x440044,
+            roughness: 0.5,
+            metalness: 0.2
+        });
+    }
+
+    spawnEnemy() {
+        if (this.enemies.length >= this.maxEnemies) return;
+
+        // Create enemy mesh
+        const enemy = new THREE.Mesh(this.enemyGeometry, this.enemyMaterial);
+
+        // Random position around player
+        const angle = Math.random() * Math.PI * 2;
+        const x = Math.cos(angle) * this.spawnRadius;
+        const z = Math.sin(angle) * this.spawnRadius;
+
+        enemy.position.set(x, 1, z);
+        enemy.castShadow = true;
+        enemy.receiveShadow = true;
+
+        // Add enemy properties
+        enemy.userData = {
+            health: 100,
+            speed: 0.5 + Math.random() * 1.5,
+            damage: 10,
+            isStunned: false,
+            stunTime: 0
+        };
+
+        this.scene.add(enemy);
+        this.enemies.push(enemy);
+    }
+
+    update(deltaTime, player) {
+        // Update spawn timer
+        this.spawnTimer += deltaTime;
+        if (this.spawnTimer >= this.spawnInterval) {
+            this.spawnTimer = 0;
+            this.spawnEnemy();
+        }
+
+        // Update each enemy
+        for (let i = this.enemies.length - 1; i >= 0; i--) {
+            const enemy = this.enemies[i];
+
+            // Skip if stunned
+            if (enemy.userData.isStunned) {
+                enemy.userData.stunTime -= deltaTime;
+                if (enemy.userData.stunTime <= 0) {
+                    enemy.userData.isStunned = false;
+                }
+                continue;
+            }
+
+            // Move towards player
+            if (player && player.model) {
+                const direction = new THREE.Vector3();
+                direction.subVectors(player.model.position, enemy.position);
+                direction.y = 0; // Keep on ground
+                direction.normalize();
+
+                // Move enemy
+                enemy.position.add(
+                    direction.multiplyScalar(enemy.userData.speed * deltaTime)
+                );
+
+                // Rotate to face player
+                enemy.lookAt(player.model.position);
+
+                // Check if close enough to attack
+                if (direction.length() < 2) {
+                    this.attackPlayer(enemy, player, deltaTime);
+                }
+            }
+
+            // Remove dead enemies
+            if (enemy.userData.health <= 0) {
+                this.scene.remove(enemy);
+                this.enemies.splice(i, 1);
+            }
+        }
+    }
+
+    attackPlayer(enemy, player, deltaTime) {
+        // Simple attack with cooldown
+        if (!enemy.userData.attackCooldown || enemy.userData.attackCooldown <= 0) {
+            player.takeDamage(enemy.userData.damage);
+            enemy.userData.attackCooldown = 1; // 1 second cooldown
+        } else {
+            enemy.userData.attackCooldown -= deltaTime;
+        }
+    }
+
+    damageEnemy(enemy, damage) {
+        if (!enemy || !enemy.userData) return;
+
+        enemy.userData.health -= damage;
+
+        // Visual feedback
+        enemy.material.emissive.setRGB(1, 0, 0);
+        setTimeout(() => {
+            if (enemy && enemy.material) {
+                enemy.material.emissive.setRGB(0.27, 0, 0.27);
+            }
+        }, 200);
+    }
+
+    stunEnemy(enemy, duration) {
+        if (!enemy || !enemy.userData) return;
+
+        enemy.userData.isStunned = true;
+        enemy.userData.stunTime = duration;
+
+        // Visual feedback
+        enemy.material.color.setRGB(0.5, 0, 0.5);
+        setTimeout(() => {
+            if (enemy && enemy.material) {
+                enemy.material.color.setRGB(1, 0, 1);
+            }
+        }, duration * 1000);
+    }
+
+    getEnemiesInRadius(position, radius) {
+        return this.enemies.filter(enemy => {
+            const distance = enemy.position.distanceTo(position);
+            return distance <= radius;
+        });
+    }
+
+    reset() {
+        // Remove all enemies
+        for (const enemy of this.enemies) {
+            this.scene.remove(enemy);
+        }
+        this.enemies = [];
+        this.spawnTimer = 0;
+    }
+}
+</file>
+
+<file path="js/game.js">
+import { Character } from './character.js';
+import { Controls } from './controls.js';
+import { Camera } from './camera.js';
+import { EnemyManager } from './enemies.js';
+import { ParticleSystem } from './effects/particles.js';
+import { LoadingManager } from './utils/loader.js';
+
+export class Game {
+    constructor() {
+        this.scene = null;
+        this.renderer = null;
+        this.clock = new THREE.Clock();
+
+        this.character = null;
+        this.controls = null;
+        this.camera = null;
+        this.enemies = null;
+        this.particles = null;
+
+        this.loadingManager = null;
+        this.isGameOver = false;
+        this.isPaused = false;
+        this.initialized = false;
+    }
+
+    init() {
+        // Prevent multiple initializations
+        if (this.initialized) return;
+        this.initialized = true;
+
+        console.log("Initializing game...");
+
+        // Make sure THREE is available
+        if (typeof THREE === 'undefined') {
+            console.error("THREE.js is not loaded. Cannot initialize game.");
+            this.showError("THREE.js library is not loaded. Please refresh the page or check your internet connection.");
+            return;
+        }
+
+        // Setup loading manager
+        this.loadingManager = new LoadingManager();
+
+        try {
+            // Initialize Three.js scene
+            this.scene = new THREE.Scene();
+            this.scene.background = new THREE.Color(0x000000);
+            this.scene.fog = new THREE.FogExp2(0x000000, 0.02);
+
+            // Setup renderer
+            this.renderer = new THREE.WebGLRenderer({ antialias: true });
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('game-container').appendChild(this.renderer.domElement);
+
+            // Setup camera
+            this.camera = new Camera(this.scene);
+
+            // Setup lighting
+            this.setupLighting();
+
+            // Setup ground
+            this.setupGround();
+
+            // Setup particle system
+            this.particles = new ParticleSystem(this.scene);
+
+            // Setup character
+            this.character = new Character(this.scene, this.loadingManager, this.particles);
+
+            // Setup controls
+            this.controls = new Controls(this.character);
+
+            // Setup enemies
+            this.enemies = new EnemyManager(this.scene, this.character, this.loadingManager);
+
+            // Handle window resize
+            window.addEventListener('resize', () => this.onWindowResize(), false);
+
+            // Start animation loop
+            this.animate();
+
+            // Handle pause with ESC key
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    this.togglePause();
+                }
+            });
+
+            console.log("Game initialization complete!");
+        } catch (error) {
+            console.error("Error initializing game:", error);
+            this.showError("An error occurred while initializing the game. Please check the console for details.");
+        }
+    }
+
+    showError(message) {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            loadingScreen.innerHTML = `
+                <div class="loading-content">
+                    <h1>Error</h1>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+    }
+
+    setupLighting() {
+        // Add ambient light
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        this.scene.add(ambientLight);
+
+        // Add directional light
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(1, 1, 1);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 50;
+        dirLight.shadow.camera.left = -20;
+        dirLight.shadow.camera.right = 20;
+        dirLight.shadow.camera.top = 20;
+        dirLight.shadow.camera.bottom = -20;
+        this.scene.add(dirLight);
+
+        // Add point lights for atmosphere
+        const purpleLight = new THREE.PointLight(0x8a2be2, 1, 50);
+        purpleLight.position.set(0, 10, 0);
+        this.scene.add(purpleLight);
+
+        // Add fog for ghostly atmosphere
+        this.scene.fog = new THREE.FogExp2(0x000000, 0.02);
+    }
+
+    setupGround() {
+        // Create a simple ground plane
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundMaterial = new THREE.MeshStandardMaterial({
+            color: 0x222222,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        this.scene.add(ground);
+    }
+
+    animate() {
+        requestAnimationFrame(() => this.animate());
+
+        if (this.isPaused) return;
+
+        const delta = this.clock.getDelta();
+
+        // Update loading progress
+        if (this.loadingManager) {
+            this.loadingManager.update();
+        }
+
+        // Update controls
+        if (this.controls && this.camera) {
+            this.controls.update(this.camera);
+        }
+
+        // Update character
+        if (this.character && !this.isGameOver) {
+            this.character.update(delta);
+            this.updateUI();
+        }
+
+        // Update camera
+        if (this.camera && this.character && this.character.model) {
+            this.camera.update(this.character.model);
+        }
+
+        // Update enemies
+        if (this.enemies && !this.isGameOver) {
+            this.enemies.update(delta, this.character);
+
+            // Check for collisions between character attacks and enemies
+            this.checkCollisions();
+        }
+
+        // Update particles
+        if (this.particles) {
+            this.particles.update(delta);
+        }
+
+        // Check game over condition
+        if (this.character && this.character.health <= 0 && !this.isGameOver) {
+            this.gameOver();
+        }
+
+        // Render scene
+        if (this.renderer && this.scene && this.camera) {
+            this.renderer.render(this.scene, this.camera.camera);
+        }
+    }
+
+    checkCollisions() {
+        // This is a simplified collision detection system
+        // In a real game, you'd want something more sophisticated
+
+        // Get all active projectiles from particles
+        if (this.particles && this.particles.particleSystems && this.enemies) {
+            const projectiles = this.particles.particleSystems.filter(p =>
+                p.userData && p.userData.type === 'projectile');
+
+            // Check each projectile against each enemy
+            projectiles.forEach(projectile => {
+                this.enemies.enemies.forEach(enemy => {
+                    // Simple distance-based collision
+                    const distance = projectile.position.distanceTo(enemy.position);
+
+                    if (distance < 1.5) { // Collision radius
+                        // Apply damage
+                        this.enemies.damageEnemy(enemy, projectile.userData.damage || 20);
+
+                        // Remove projectile
+                        this.scene.remove(projectile);
+                        const index = this.particles.particleSystems.indexOf(projectile);
+                        if (index > -1) {
+                            this.particles.particleSystems.splice(index, 1);
+                        }
+                    }
+                });
+            });
+
+            // Handle area effects (like hypnosis)
+            const areaEffects = this.particles.particleSystems.filter(p =>
+                p.userData && p.userData.type === 'area');
+
+            areaEffects.forEach(effect => {
+                if (effect.userData.effect === 'stun') {
+                    // Get enemies in radius
+                    const enemiesInRange = this.enemies.getEnemiesInRadius(
+                        effect.position,
+                        effect.userData.radius || 5
+                    );
+
+                    // Apply stun
+                    enemiesInRange.forEach(enemy => {
+                        this.enemies.stunEnemy(enemy, 3); // 3 seconds stun
+                    });
+                }
+            });
+        }
+    }
+
+    updateUI() {
+        // Update health and energy bars
+        const healthFill = document.getElementById('health-fill');
+        const energyFill = document.getElementById('energy-fill');
+
+        if (healthFill && this.character) {
+            const healthPercent = Math.max(0, this.character.health);
+            healthFill.style.width = `${healthPercent}%`;
+        }
+
+        if (energyFill && this.character) {
+            const energyPercent = Math.max(0, this.character.energy);
+            energyFill.style.width = `${energyPercent}%`;
+        }
+
+        // Update ability cooldowns
+        const abilities = ['shadowBall', 'hypnosis', 'dreamEater', 'shadowPunch'];
+        abilities.forEach(ability => {
+            const abilityElement = document.getElementById(ability.replace(/([A-Z])/g, '-$1').toLowerCase());
+            if (abilityElement && this.character) {
+                const cooldownElement = abilityElement.querySelector('.cooldown');
+                if (cooldownElement) {
+                    const cooldownPercent = this.character.getCooldownPercent(ability);
+                    cooldownElement.style.height = `${cooldownPercent}%`;
+                }
+            }
+        });
+    }
+
+    gameOver() {
+        this.isGameOver = true;
+        const gameOverElement = document.getElementById('game-over');
+        if (gameOverElement) {
+            gameOverElement.classList.remove('hidden');
+        }
+    }
+
+    restart() {
+        console.log("Restarting game...");
+
+        // Reset character
+        if (this.character) {
+            this.character.reset();
+        }
+
+        // Reset enemies
+        if (this.enemies) {
+            this.enemies.reset();
+        }
+
+        // Clear all particles
+        if (this.particles) {
+            this.particles.clear();
+        }
+
+        this.isGameOver = false;
+        console.log("Game restarted.");
+    }
+
+    togglePause() {
+        this.isPaused = !this.isPaused;
+        const controlsInfo = document.getElementById('controls-info');
+
+        if (controlsInfo) {
+            if (this.isPaused) {
+                controlsInfo.classList.remove('hidden');
+            } else {
+                controlsInfo.classList.add('hidden');
+            }
+        }
+
+        console.log("Game " + (this.isPaused ? "paused" : "resumed"));
+    }
+
+    onWindowResize() {
+        if (this.camera && this.camera.camera) {
+            this.camera.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.camera.updateProjectionMatrix();
+        }
+
+        if (this.renderer) {
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    }
+
+    cleanup() {
+        // Remove event listeners
+        window.removeEventListener('resize', this.onWindowResize);
+        document.removeEventListener('keydown', this.onKeyDown);
+
+        // Dispose of Three.js resources
+        if (this.renderer) {
+            this.renderer.dispose();
+        }
+
+        // Remove controls
+        if (this.controls) {
+            this.controls.dispose();
+        }
+
+        console.log("Game resources cleaned up");
+    }
+}
+</file>
+
+<file path="js/main.js">
+// Replace your js/main.js file with this
+
+// We no longer need to import THREE since it's now global from the script tag
+import { Game } from './game.js';
+
+// Wait for DOM to load
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM Content Loaded - Initializing game");
+
+    // Check if THREE is available globally
+    if (typeof THREE === 'undefined') {
+        console.error("THREE.js is not loaded! The game cannot start.");
+        document.getElementById('loading-screen').innerHTML = `
+            <div class="loading-content">
+                <h1>Error Loading Game</h1>
+                <p>THREE.js library could not be loaded. Please check your internet connection.</p>
+            </div>
+        `;
+        return;
+    }
+
+    console.log("THREE.js is loaded, version:", THREE.REVISION);
+
+    // Initialize the game
+    const game = new Game();
+    game.init();
+
+    // Handle UI events
+    const restartButton = document.getElementById('restart-button');
+    if (restartButton) {
+        restartButton.addEventListener('click', () => {
+            document.getElementById('game-over').classList.add('hidden');
+            game.restart();
+        });
+    }
+
+    // Controls info
+    const closeControlsButton = document.getElementById('close-controls');
+    if (closeControlsButton) {
+        closeControlsButton.addEventListener('click', () => {
+            document.getElementById('controls-info').classList.add('hidden');
+        });
+    }
+
+    // Show controls on first load
+    setTimeout(() => {
+        document.getElementById('controls-info').classList.remove('hidden');
+    }, 3000);
+});
+</file>
+
+<file path="styles/main.css">
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  overflow: hidden;
+  font-family: 'Arial', sans-serif;
+  background-color: #000;
+  color: #fff;
+}
+
+#game-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Loading Screen */
+#loading-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  transition: opacity 0.5s;
+}
+
+.loading-content {
+  text-align: center;
+}
+
+.loading-content h1 {
+  color: #8a2be2;
+  margin-bottom: 20px;
+  font-size: 2.5rem;
+  text-shadow: 0 0 10px #8a2be2;
+}
+
+.progress-bar {
+  width: 300px;
+  height: 20px;
+  background-color: #222;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+.progress {
+  width: 0%;
+  height: 100%;
+  background-color: #8a2be2;
+  transition: width 0.3s;
+}
+
+/* UI Overlay */
+#ui-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.health-bar, .energy-bar {
+  position: absolute;
+  left: 20px;
+  width: 300px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+}
+
+.health-bar {
+  top: 20px;
+}
+
+.energy-bar {
+  top: 60px;
+}
+
+.health-label, .energy-label {
+  width: 80px;
+  font-weight: bold;
+  text-align: right;
+  padding-right: 10px;
+}
+
+.bar-container {
+  flex-grow: 1;
+  height: 20px;
+  background-color: rgba(0, 0, 0, 0.5);
+  border: 2px solid #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+#health-fill {
+  width: 100%;
+  height: 100%;
+  background-color: #ff3333;
+  transition: width 0.3s;
+}
+
+#energy-fill {
+  width: 100%;
+  height: 100%;
+  background-color: #3333ff;
+  transition: width 0.3s;
+}
+
+.abilities {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+}
+
+.ability {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border: 2px solid #8a2be2;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.ability .key {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  background-color: #8a2be2;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
+.ability .name {
+  font-size: 0.8rem;
+  text-align: center;
+  margin-top: 5px;
+}
+
+.cooldown {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0%;
+  background-color: rgba(0, 0, 0, 0.7);
+  transition: height 0.1s;
+}
+
+/* Game Over Screen */
+#game-over {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+}
+
+#game-over h2 {
+  color: #ff3333;
+  font-size: 3rem;
+  margin-bottom: 30px;
+  text-shadow: 0 0 10px #ff3333;
+}
+
+#restart-button {
+  padding: 10px 20px;
+  background-color: #8a2be2;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+#restart-button:hover {
+  background-color: #7a1bd2;
+}
+
+/* Controls Info */
+#controls-info {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.9);
+  padding: 20px;
+  border-radius: 10px;
+  border: 2px solid #8a2be2;
+  z-index: 40;
+}
+
+#controls-info h3 {
+  color: #8a2be2;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+#controls-info ul {
+  list-style-type: none;
+  margin-bottom: 20px;
+}
+
+#controls-info li {
+  margin-bottom: 5px;
+}
+
+#close-controls {
+  display: block;
+  margin: 0 auto;
+  padding: 5px 15px;
+  background-color: #8a2be2;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.hidden {
+  display: none !important;
+}
+</file>
+
+<file path=".gitignore">
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Icon must end with two \r
+Icon
+
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+</file>
+
+<file path="index.html">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gengar Game</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="loading-screen">
+            <div class="loading-content">
+                <h1>Loading Gengar...</h1>
+                <div class="progress-bar">
+                    <div class="progress"></div>
+                </div>
+            </div>
+        </div>
+        <div id="ui-overlay">
+            <div class="health-bar">
+                <div class="health-label">HP</div>
+                <div class="bar-container">
+                    <div id="health-fill"></div>
+                </div>
+            </div>
+            <div class="energy-bar">
+                <div class="energy-label">ENERGY</div>
+                <div class="bar-container">
+                    <div id="energy-fill"></div>
+                </div>
+            </div>
+            <div class="abilities">
+                <div class="ability" id="shadow-ball">
+                    <div class="cooldown"></div>
+                    <div class="key">Q</div>
+                    <div class="name">Shadow Ball</div>
+                </div>
+                <div class="ability" id="hypnosis">
+                    <div class="cooldown"></div>
+                    <div class="key">W</div>
+                    <div class="name">Hypnosis</div>
+                </div>
+                <div class="ability" id="dream-eater">
+                    <div class="cooldown"></div>
+                    <div class="key">E</div>
+                    <div class="name">Dream Eater</div>
+                </div>
+                <div class="ability" id="shadow-punch">
+                    <div class="cooldown"></div>
+                    <div class="key">R</div>
+                    <div class="name">Shadow Punch</div>
+                </div>
+            </div>
+        </div>
+        <div id="game-over" class="hidden">
+            <h2>Game Over</h2>
+            <button id="restart-button">Restart</button>
+        </div>
+        <div id="controls-info" class="hidden">
+            <h3>Controls</h3>
+            <ul>
+                <li>WASD - Move</li>
+                <li>SPACE - Jump</li>
+                <li>Q - Shadow Ball</li>
+                <li>W - Hypnosis</li>
+                <li>E - Dream Eater</li>
+                <li>R - Shadow Punch</li>
+                <li>ESC - Pause</li>
+            </ul>
+            <button id="close-controls">Close</button>
+        </div>
+    </div>
+
+    <!-- Step 1: Import the main THREE.js library -->
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+
+    <!-- Step 2: Set up global namespace and helpers -->
+    <script>
+        // Ensure THREE is defined and set up our global namespace
+        window.THREE = window.THREE || {};
+        console.log("THREE.js loaded, version:", THREE.REVISION);
+    </script>
+
+    <!-- Step 3: Import the FBXLoader -->
+    <script src="https://unpkg.com/three@0.160.0/examples/jsm/loaders/FBXLoader.js"></script>
+
+    <!-- Step 4: Load our custom loader helper -->
+    <script src="js/loaders.js"></script>
+
+    <!-- Step 5: Make FBXLoader globally available -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Try to make FBXLoader accessible if it's not already
+            if (typeof window.FBXLoader === 'undefined') {
+                try {
+                    // Check for module version
+                    if (typeof THREE.examples !== 'undefined' &&
+                        typeof THREE.examples.jsm !== 'undefined' &&
+                        typeof THREE.examples.jsm.loaders !== 'undefined' &&
+                        typeof THREE.examples.jsm.loaders.FBXLoader !== 'undefined') {
+
+                        window.FBXLoader = THREE.examples.jsm.loaders.FBXLoader;
+                        console.log("Successfully made FBXLoader global from module");
+                    }
+                } catch (e) {
+                    console.error("Error making FBXLoader global:", e);
+                }
+            }
+
+            // Print diagnostic info
+            console.log("FBXLoader globally available:", typeof window.FBXLoader !== 'undefined');
+        });
+    </script>
+
+    <!-- Step 6: Main game script (using modules) -->
+    <script type="module" src="js/main.js"></script>
+
+    <!-- Step 7: Debug helper (optional) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("==== THREE.js LOADING DIAGNOSTICS ====");
+            console.log("THREE.js loaded:", typeof THREE !== 'undefined');
+            console.log("THREE version:", typeof THREE !== 'undefined' ? THREE.REVISION : 'N/A');
+            console.log("FBXLoader globally available:", typeof window.FBXLoader !== 'undefined');
+            console.log("THREE.FBXLoader available:", typeof THREE.FBXLoader !== 'undefined');
+
+            // Additional checks for module structure
+            if (typeof THREE !== 'undefined' && typeof THREE.examples !== 'undefined') {
+                console.log("THREE.examples.jsm.loaders.FBXLoader available:",
+                    typeof THREE.examples.jsm !== 'undefined' &&
+                    typeof THREE.examples.jsm.loaders !== 'undefined' &&
+                    typeof THREE.examples.jsm.loaders.FBXLoader !== 'undefined');
+            }
+
+            console.log("==== END DIAGNOSTICS ====");
+        });
+    </script>
+</body>
+</html>
+</file>
+
+<file path="js/controls.js">
+export class Controls {
+  constructor(character) {
+    this.character = character;
+    this.keys = {
+        forward: false,
+        backward: false,
+        left: false,
+        right: false,
+        jump: false,
+        shadowBall: false,
+        hypnosis: false,
+        dreamEater: false,
+        shadowPunch: false
+    };
+
+    this.direction = new THREE.Vector3(0, 0, 0);
+    this.isAttacking = false;
+
+    // Bind event handlers to maintain this context
+    this.onKeyDown = this.onKeyDown.bind(this);
+    this.onKeyUp = this.onKeyUp.bind(this);
+
+    this.setupEventListeners();
+  }
+
+  setupEventListeners() {
+      // Keyboard events
+      document.addEventListener('keydown', this.onKeyDown, false);
+      document.addEventListener('keyup', this.onKeyUp, false);
+  }
+
+  onKeyDown(event) {
+      switch(event.code) {
+          case 'KeyW':
+          case 'ArrowUp':
+              this.keys.forward = true;
+              break;
+          case 'KeyS':
+          case 'ArrowDown':
+              this.keys.backward = true;
+              break;
+          case 'KeyA':
+          case 'ArrowLeft':
+              this.keys.left = true;
+              break;
+          case 'KeyD':
+          case 'ArrowRight':
+              this.keys.right = true;
+              break;
+          case 'Space':
+              this.keys.jump = true;
+              break;
+          case 'KeyQ':
+              if (!this.keys.shadowBall) {
+                  this.keys.shadowBall = true;
+                  this.performAttack('shadowBall');
+              }
+              break;
+          case 'KeyW':
+              // We need to avoid conflict with the forward movement
+              // So only capture for attacks if not already moving forward
+              if (!this.keys.forward) {
+                  this.keys.hypnosis = true;
+                  this.performAttack('hypnosis');
+              }
+              break;
+          case 'KeyE':
+              this.keys.dreamEater = true;
+              this.performAttack('dreamEater');
+              break;
+          case 'KeyR':
+              this.keys.shadowPunch = true;
+              this.performAttack('shadowPunch');
+              break;
+      }
+  }
+
+  onKeyUp(event) {
+      switch(event.code) {
+          case 'KeyW':
+          case 'ArrowUp':
+              this.keys.forward = false;
+              break;
+          case 'KeyS':
+          case 'ArrowDown':
+              this.keys.backward = false;
+              break;
+          case 'KeyA':
+          case 'ArrowLeft':
+              this.keys.left = false;
+              break;
+          case 'KeyD':
+          case 'ArrowRight':
+              this.keys.right = false;
+              break;
+          case 'Space':
+              this.keys.jump = false;
+              break;
+          case 'KeyQ':
+              this.keys.shadowBall = false;
+              break;
+          case 'KeyW':
+              this.keys.hypnosis = false;
+              break;
+          case 'KeyE':
+              this.keys.dreamEater = false;
+              break;
+          case 'KeyR':
+              this.keys.shadowPunch = false;
+              break;
+      }
+  }
+
+  update(camera) {
+      // Calculate movement direction
+      this.direction.set(0, 0, 0);
+
+      if (this.keys.forward) {
+          this.direction.z = -1;
+      }
+      if (this.keys.backward) {
+          this.direction.z = 1;
+      }
+      if (this.keys.left) {
+          this.direction.x = -1;
+      }
+      if (this.keys.right) {
+          this.direction.x = 1;
+      }
+
+      // Normalize direction vector if moving diagonally
+      if (this.direction.x !== 0 && this.direction.z !== 0) {
+          this.direction.normalize();
+      }
+
+      // Apply camera rotation to movement direction
+      if (camera && (this.direction.x !== 0 || this.direction.z !== 0)) {
+          const cameraDirection = new THREE.Vector3();
+          camera.getWorldDirection(cameraDirection);
+          cameraDirection.y = 0;
+          cameraDirection.normalize();
+
+          // Create rotation matrix based on camera direction
+          const rotationMatrix = new THREE.Matrix4();
+          rotationMatrix.lookAt(
+              new THREE.Vector3(0, 0, 0),
+              cameraDirection,
+              new THREE.Vector3(0, 1, 0)
+          );
+
+          // Apply rotation to direction vector
+          const moveDirection = this.direction.clone();
+          moveDirection.applyMatrix4(rotationMatrix);
+
+          this.direction.x = moveDirection.x;
+          this.direction.z = moveDirection.z;
+      }
+
+      // Apply movement to character
+      if (this.character) {
+          // Move the character based on the direction
+          if (this.direction.x !== 0 || this.direction.z !== 0) {
+              // Call the character's move method with the calculated direction
+              this.character.move(this.direction);
+          } else if (this.character.isMoving) {
+              // Stop moving if no direction keys are pressed
+              this.character.move(new THREE.Vector3(0, 0, 0));
+          }
+
+          // Handle jump
+          if (this.keys.jump) {
+              // Jump logic would go here if implemented in the character
+          }
+      }
+  }
+
+  performAttack(attackType) {
+      if (!this.character || this.isAttacking) return;
+
+      let attacked = false;
+
+      // Execute attack based on type
+      switch(attackType) {
+          case 'shadowBall':
+              attacked = this.character.shadowBall();
+              break;
+          case 'hypnosis':
+              attacked = this.character.hypnosis();
+              break;
+          case 'dreamEater':
+              attacked = this.character.dreamEater();
+              break;
+          case 'shadowPunch':
+              attacked = this.character.shadowPunch();
+              break;
+      }
+
+      // Only set attacking flag if the attack was successful
+      if (attacked) {
+          // Set attacking flag to prevent multiple attacks
+          this.isAttacking = true;
+
+          // Reset attacking state after a delay
+          setTimeout(() => {
+              this.isAttacking = false;
+          }, this.getAttackDuration(attackType));
+      }
+  }
+
+  getAttackDuration(attackType) {
+      // Return appropriate duration for each attack type
+      // This should match the animation duration
+      switch(attackType) {
+          case 'shadowBall': return 500; // milliseconds
+          case 'hypnosis': return 1000;
+          case 'dreamEater': return 1500;
+          case 'shadowPunch': return 300;
+          default: return 500;
+      }
+  }
+
+  dispose() {
+      // Remove event listeners when no longer needed
+      document.removeEventListener('keydown', this.onKeyDown);
+      document.removeEventListener('keyup', this.onKeyUp);
+  }
+}
+</file>
+
+</files>

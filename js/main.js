@@ -1,8 +1,26 @@
-import * as THREE from 'three';
+// Replace your js/main.js file with this
+
+// We no longer need to import THREE since it's now global from the script tag
 import { Game } from './game.js';
 
 // Wait for DOM to load
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM Content Loaded - Initializing game");
+
+    // Check if THREE is available globally
+    if (typeof THREE === 'undefined') {
+        console.error("THREE.js is not loaded! The game cannot start.");
+        document.getElementById('loading-screen').innerHTML = `
+            <div class="loading-content">
+                <h1>Error Loading Game</h1>
+                <p>THREE.js library could not be loaded. Please check your internet connection.</p>
+            </div>
+        `;
+        return;
+    }
+
+    console.log("THREE.js is loaded, version:", THREE.REVISION);
+
     // Initialize the game
     const game = new Game();
     game.init();

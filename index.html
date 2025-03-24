@@ -1,62 +1,62 @@
 <!DOCTYPE html>
-<html lang=\"en\">
+<html lang="en">
 <head>
-    <meta charset=\"UTF-8\">
-    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gengar Game</title>
-    <link rel=\"stylesheet\" href=\"styles/main.css\">
+    <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
-    <div id=\"game-container\">
-        <div id=\"loading-screen\">
-            <div class=\"loading-content\">
+    <div id="game-container">
+        <div id="loading-screen">
+            <div class="loading-content">
                 <h1>Loading Gengar...</h1>
-                <div class=\"progress-bar\">
-                    <div class=\"progress\"></div>
+                <div class="progress-bar">
+                    <div class="progress"></div>
                 </div>
             </div>
         </div>
-        <div id=\"ui-overlay\">
-            <div class=\"health-bar\">
-                <div class=\"health-label\">HP</div>
-                <div class=\"bar-container\">
-                    <div id=\"health-fill\"></div>
+        <div id="ui-overlay">
+            <div class="health-bar">
+                <div class="health-label">HP</div>
+                <div class="bar-container">
+                    <div id="health-fill"></div>
                 </div>
             </div>
-            <div class=\"energy-bar\">
-                <div class=\"energy-label\">ENERGY</div>
-                <div class=\"bar-container\">
-                    <div id=\"energy-fill\"></div>
+            <div class="energy-bar">
+                <div class="energy-label">ENERGY</div>
+                <div class="bar-container">
+                    <div id="energy-fill"></div>
                 </div>
             </div>
-            <div class=\"abilities\">
-                <div class=\"ability\" id=\"shadow-ball\">
-                    <div class=\"cooldown\"></div>
-                    <div class=\"key\">Q</div>
-                    <div class=\"name\">Shadow Ball</div>
+            <div class="abilities">
+                <div class="ability" id="shadow-ball">
+                    <div class="cooldown"></div>
+                    <div class="key">Q</div>
+                    <div class="name">Shadow Ball</div>
                 </div>
-                <div class=\"ability\" id=\"hypnosis\">
-                    <div class=\"cooldown\"></div>
-                    <div class=\"key\">W</div>
-                    <div class=\"name\">Hypnosis</div>
+                <div class="ability" id="hypnosis">
+                    <div class="cooldown"></div>
+                    <div class="key">W</div>
+                    <div class="name">Hypnosis</div>
                 </div>
-                <div class=\"ability\" id=\"dream-eater\">
-                    <div class=\"cooldown\"></div>
-                    <div class=\"key\">E</div>
-                    <div class=\"name\">Dream Eater</div>
+                <div class="ability" id="dream-eater">
+                    <div class="cooldown"></div>
+                    <div class="key">E</div>
+                    <div class="name">Dream Eater</div>
                 </div>
-                <div class=\"ability\" id=\"shadow-punch\">
-                    <div class=\"cooldown\"></div>
-                    <div class=\"key\">R</div>
-                    <div class=\"name\">Shadow Punch</div>
+                <div class="ability" id="shadow-punch">
+                    <div class="cooldown"></div>
+                    <div class="key">R</div>
+                    <div class="name">Shadow Punch</div>
                 </div>
             </div>
         </div>
-        <div id=\"game-over\" class=\"hidden\">
+        <div id="game-over" class="hidden">
             <h2>Game Over</h2>
-            <button id=\"restart-button\">Restart</button>
+            <button id="restart-button">Restart</button>
         </div>
-        <div id=\"controls-info\" class=\"hidden\">
+        <div id="controls-info" class="hidden">
             <h3>Controls</h3>
             <ul>
                 <li>WASD - Move</li>
@@ -67,21 +67,73 @@
                 <li>R - Shadow Punch</li>
                 <li>ESC - Pause</li>
             </ul>
-            <button id=\"close-controls\">Close</button>
+            <button id="close-controls">Close</button>
         </div>
     </div>
 
-    <!-- Import maps for ES modules -->
-    <script type=\"importmap\">
-        {
-            \"imports\": {
-                \"three\": \"https://unpkg.com/three@0.160.0/build/three.module.js\",
-                \"three/addons/\": \"https://unpkg.com/three@0.160.0/examples/jsm/\"
-            }
-        }
+    <!-- Step 1: Import the main THREE.js library -->
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+
+    <!-- Step 2: Set up global namespace and helpers -->
+    <script>
+        // Ensure THREE is defined and set up our global namespace
+        window.THREE = window.THREE || {};
+        console.log("THREE.js loaded, version:", THREE.REVISION);
     </script>
 
-    <!-- Main script -->
-    <script type=\"module\" src=\"js/main.js\"></script>
+    <!-- Step 3: Import the FBXLoader -->
+    <script src="https://unpkg.com/three@0.160.0/examples/jsm/loaders/FBXLoader.js"></script>
+
+    <!-- Step 4: Load our custom loader helper -->
+    <script src="js/loaders.js"></script>
+
+    <!-- Step 5: Make FBXLoader globally available -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Try to make FBXLoader accessible if it's not already
+            if (typeof window.FBXLoader === 'undefined') {
+                try {
+                    // Check for module version
+                    if (typeof THREE.examples !== 'undefined' &&
+                        typeof THREE.examples.jsm !== 'undefined' &&
+                        typeof THREE.examples.jsm.loaders !== 'undefined' &&
+                        typeof THREE.examples.jsm.loaders.FBXLoader !== 'undefined') {
+
+                        window.FBXLoader = THREE.examples.jsm.loaders.FBXLoader;
+                        console.log("Successfully made FBXLoader global from module");
+                    }
+                } catch (e) {
+                    console.error("Error making FBXLoader global:", e);
+                }
+            }
+
+            // Print diagnostic info
+            console.log("FBXLoader globally available:", typeof window.FBXLoader !== 'undefined');
+        });
+    </script>
+
+    <!-- Step 6: Main game script (using modules) -->
+    <script type="module" src="js/main.js"></script>
+
+    <!-- Step 7: Debug helper (optional) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("==== THREE.js LOADING DIAGNOSTICS ====");
+            console.log("THREE.js loaded:", typeof THREE !== 'undefined');
+            console.log("THREE version:", typeof THREE !== 'undefined' ? THREE.REVISION : 'N/A');
+            console.log("FBXLoader globally available:", typeof window.FBXLoader !== 'undefined');
+            console.log("THREE.FBXLoader available:", typeof THREE.FBXLoader !== 'undefined');
+
+            // Additional checks for module structure
+            if (typeof THREE !== 'undefined' && typeof THREE.examples !== 'undefined') {
+                console.log("THREE.examples.jsm.loaders.FBXLoader available:",
+                    typeof THREE.examples.jsm !== 'undefined' &&
+                    typeof THREE.examples.jsm.loaders !== 'undefined' &&
+                    typeof THREE.examples.jsm.loaders.FBXLoader !== 'undefined');
+            }
+
+            console.log("==== END DIAGNOSTICS ====");
+        });
+    </script>
 </body>
 </html>

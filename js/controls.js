@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 export class Controls {
   constructor(character) {
       this.character = character;
